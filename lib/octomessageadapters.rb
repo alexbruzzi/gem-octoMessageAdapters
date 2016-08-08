@@ -12,12 +12,12 @@ module Octo
 
     module ClassMethods
       
-      # returns an array of adapters
+      # Returns an array of adapters
       def adapters
         @adapters ||= {}
       end
 
-      # returns the list of default callbacks
+      # Returns the list of default callbacks
       def callback_list
         [:after_app_init, :after_app_login, :after_app_logout, 
           :after_page_view, :after_productpage_view]
@@ -54,17 +54,17 @@ module Octo
         @allowed_callback << callback
       end
 
-      # return list of allowed callbacks
+      # Return list of allowed callbacks
       def allowed_callback
         @allowed_callbacks ||= MessageAdapter.callback_list
       end
 
-      # activating adapter 
+      # Activating adapter 
       def activate_if
         @adapters[self] = yield
       end
 
-      # registering adapter
+      # Registering adapter
       # @param [Module] klass of an Adapter
       def register(klass)
         adapter_id = klass.const_get(:ADAPTER_ID)
@@ -78,7 +78,7 @@ module Octo
         end
       end
 
-      # loading all allowed callbacks
+      # Loading all allowed callbacks
       def load_callbacks
         allowed_callback.each do |event|
           Octo::Callbacks.send(event, lambda { |opts|
@@ -114,7 +114,7 @@ module Octo
     # @param [Module] adapter
     # @param [Octo::Message::Message] msg_obj Message Object
     def self.perform(adapter, msg_obj)
-      
+      adapter.sender(msg_obj)
     end
   end
 end
