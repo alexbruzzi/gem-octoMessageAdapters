@@ -4,7 +4,7 @@ module Octo
 
   # Module for Google Analytics
   module GaAdapter
-    include Octo::AdapterSettings
+    include Octo::AdapterMethods
 
     ADAPTER_ID = 0
 

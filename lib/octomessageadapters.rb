@@ -3,13 +3,9 @@ require 'resque'
 require 'resque-scheduler'
 require 'octocore'
 
-require 'octomessageadapters/ga_adapter'
-
 module Octo
-
   # Generic Adapter module
   module MessageAdapter
-
     module ClassMethods
       
       # Returns an array of adapters
@@ -38,10 +34,14 @@ module Octo
     
     # On including this module
     def self.included(receiver)
-      receiver.extend ClassMethods
-      AdapterSettings.load_callbacks
+      begin
+        Octo.connect_with(File.join(Dir.pwd, 'Octo/config'))
+        receiver.extend ClassMethods
+        # Octo::AdapterMethods.load_callbacks
+      rescue Exception => e
+        Octo.logger.error(e)
+      end
     end
-
   end
 
   # Generic Adapter Methods module
@@ -51,7 +51,7 @@ module Octo
       # Adding callbacks to allowed callbacks
       # @param [Key] callback
       def callbacks_for(callback)
-        @allowed_callback << callback
+        @allowed_callbacks << callback
       end
 
       # Return list of allowed callbacks
@@ -67,24 +67,32 @@ module Octo
       # Registering adapter
       # @param [Module] klass of an Adapter
       def register(klass)
-        adapter_id = klass.const_get(:ADAPTER_ID)
-        Octo::Enterprise.all.each do |enterprise|
-          opt = {
-            enterprise_id: enterprise.id, 
-            adapter_id: adapter_id, 
-            enable: true
-          }
-          @adapters[klass] << Octo::AdapterDetails.get_cached(opt).first
+        begin
+          adapter_id = klass.const_get(:ADAPTER_ID)
+          Octo::Enterprise.all.each do |enterprise|
+            opt = {
+              enterprise_id: enterprise.id, 
+              adapter_id: adapter_id, 
+              enable: true
+            }
+            @adapters[klass] << Octo::AdapterDetails.get_cached(opt).first
+          end
+        rescue Exception => e
+          Octo.logger.error(e)
         end
       end
 
       # Loading all allowed callbacks
-      def load_callbacks
-        allowed_callback.each do |event|
-          Octo::Callbacks.send(event, lambda { |opts|
-            msg_obj = Octo::Message::Message.new(opts)
-            MessageAdapter.send_to_adapters msg_obj
-          })
+      def self.load_callbacks
+        begin
+          allowed_callback.each do |event|
+            Octo::Callbacks.send(event, lambda { |opts|
+              msg_obj = Octo::Message::Message.new(opts)
+              Octo::MessageAdapter.send_to_adapters msg_obj
+            })
+          end
+        rescue Exception => e
+          Octo.logger.error(e)
         end
       end
 
@@ -118,3 +126,7 @@ module Octo
     end
   end
 end
+
+# require 'octomessageadapters/ga_adapter'
+
+Octo.send(:include, Octo::MessageAdapter)

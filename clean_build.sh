@@ -1,2 +1,3 @@
 rm *.gem
-gem build octomessageadapters.gemspec && gem uninstall octomessageadapters --force && gem install octomessageadapters-0.0.1.gem
+gem build octomessageadapters.gemspec && gem uninstall octomessageadapters --force
+find . -name '*.gem' | xargs gem install
