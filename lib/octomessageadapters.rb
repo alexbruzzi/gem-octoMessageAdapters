@@ -9,23 +9,25 @@ module Octo
     module ClassMethods
       
       # Returns an array of adapters
+      # @return [Array] Adapters array
       def adapters
-        @adapters ||= {}
+        @adapters ||= []
       end
 
       # Returns the list of default callbacks
+      # @returns [Set] List of default callbacks
       def callback_list
-        [:after_app_init, :after_app_login, :after_app_logout, 
-          :after_page_view, :after_productpage_view]
+        Set.new(%w(:after_app_init, :after_app_login, :after_app_logout, 
+          :after_page_view, :after_productpage_view))
       end
 
       # Sending message object to adapters
-      # @param [Octo::Message::Message] msg_obj Message Object
-      def send_to_adapters(msg_obj)
+      # @param [Octo::Message::Message] msg Message Object
+      def send_to_adapters(msg)
         adapters.each do |ad|
           ad.each do |a_detail| 
-            if a_detail[:enterprise_id] == msg_obj.eid
-              Resque.enqueue(Octo::AdapterSender, ad, msg_obj)
+            if a_detail[:enterprise_id] == msg.eid
+              Resque.enqueue(Octo::AdapterSender, ad, msg)
             end
           end
         end
@@ -55,6 +57,8 @@ module Octo
       end
 
       # Return list of allowed callbacks
+      # Its a seperate list for every adapter to manage caallbacks
+      # Example: callbacks_for :after_app_init, :after_app_login
       def allowed_callback
         @allowed_callbacks ||= MessageAdapter.callback_list
       end
@@ -98,10 +102,10 @@ module Octo
 
       # Fetch Adapter settings
       # @param [Module] klass of an Adapter
-      # @param [Octo::Message::Message] msg_obj Message Object
-      def settings(kclass, msg_obj)
-        @adapters[kclass].select {|adapter| 
-          adapter[:enterprise_id] == msg_obj.eid
+      # @param [Octo::Message::Message] msg Message Object
+      def settings(kclass, msg)
+        @adapters[kclass].select { |adapter| 
+          adapter[:enterprise_id] == msg.eid
         }.first.settings
       end
       
@@ -120,9 +124,9 @@ module Octo
 
     # Resque perform method to allocate adapters
     # @param [Module] adapter
-    # @param [Octo::Message::Message] msg_obj Message Object
-    def self.perform(adapter, msg_obj)
-      adapter.sender(msg_obj)
+    # @param [Octo::Message::Message] msg Message Object
+    def self.perform(adapter, msg)
+      adapter.send(:sender, msg)
     end
   end
 end
