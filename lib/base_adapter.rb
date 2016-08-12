@@ -106,8 +106,6 @@ module Octo
       # Set all Adapters
       def set_adapters
         @adapters = get_adapters
-        puts 'List of adapters'
-        puts @adapters
         @adapters.each do |adapter|
           adapter.send(:settings)
           if adapter.send(:activate)
