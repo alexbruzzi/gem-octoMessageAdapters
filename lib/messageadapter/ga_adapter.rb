@@ -1,15 +1,11 @@
 require 'staccato'
 
-module Adapter
+module Octo
   # Module for Google Analytics
   module GaAdapter
-    include Adapter::BaseAdapter
+    include Octo::BaseAdapter
 
-    ADAPTER_ID = 0
+    ADAPTER_ID = 1
 
-    # Set callbacks for GA adapter
-    # callbacks_for :after_app_init, :after_app_login
-
-    
   end
 end

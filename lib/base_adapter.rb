@@ -1,14 +1,14 @@
 require 'set'
 
 require 'octocore'
-require 'messageadapter/ga_adapter'
+require 'octocore/callbacks'
 
-module Adapter
+module Octo
   # Adapter to perform all adapter operations
-	module BaseAdapter
+  module BaseAdapter
     # Default set of Octo Events Callback
-    DEFAULT_CALLBACKS = Set.new(%w(:after_app_init :after_app_login :after_app_logout 
-      :after_page_view :after_productpage_view))
+    DEFAULT_CALLBACKS = [:after_app_init, :after_app_login, :after_app_logout, 
+      :after_page_view, :after_productpage_view]
 
     module ClassMethods
       # Add Callbacks for adapter
@@ -99,46 +99,48 @@ module Adapter
 
   # Adapter class which sets all adapters
   class Adapter
-    # Valid Adapters List
-    @valid_adapters = []
+    class << self
+      # Valid Adapters List
+      @@valid_adapters = []
 
-    # Set all Adapters
-    def set_adapters
-      @adapters = get_adapters
-      @adapters.each do |adapter|
-        adapter.send(:settings)
-        if adapter.send(:activate)
-          @valid_adapters << adapter
+      # Set all Adapters
+      def set_adapters
+        @adapters = get_adapters
+        puts 'List of adapters'
+        puts @adapters
+        @adapters.each do |adapter|
+          adapter.send(:settings)
+          if adapter.send(:activate)
+            @@valid_adapters << adapter
+          end
         end
       end
-    end
 
-    # Set all Callbacks
-    def set_callbacks
-      @valid_adapters.each do |adapter|
-        adapter.send(:callbacks).each do |callback|
-          Octo::Callbacks.send(callback, lambda { |opts|
-            adapter.send(:perform, opts)
-          })
+      # Set all Callbacks
+      def set_callbacks
+        @@valid_adapters.each do |adapter|
+          adapter.send(:callbacks).each do |callback|
+            Octo::Callbacks.send(callback, lambda { |opts|
+              adapter.send(:perform, opts)
+            })
+          end
         end
       end
-    end
 
-    # Fetch adapters list
-    def get_adapters
-      ObjectSpace.each_object(Module).select { |m| 
-        m.included_modules.include? Adapter::BaseAdapter
-      }
-    end
+      # Fetch adapters list
+      def get_adapters
+        ObjectSpace.each_object(Module).select { |m| 
+          m.included_modules.include? Octo::BaseAdapter
+        }
+      end
 
-    # After connect method called after Octo connection
-    def self.after_connect
-      set_adapters
-      set_callbacks
+      # After connect method called after Octo connection
+      def after_connect
+        set_adapters
+        set_callbacks
+      end
     end
   end
 end
 
-Octo::Callbacks.send(:after_connect, lambda {
-  Adapter.Adapter.after_connect
-})
+require 'messageadapter/hello_adapter'
