@@ -1,5 +1,3 @@
-require 'set'
-
 require 'octocore'
 require 'octocore/callbacks'
 
@@ -18,7 +16,7 @@ module Octo
       end
 
       # Enterprise check to allow all enterprises
-      # @return [Bool] check Allow all Enterprises
+      # @return [Boolean] check Allow all Enterprises
       def enterprise_only(check = true)
         @enterprise_only = check
       end
@@ -45,41 +43,41 @@ module Octo
       end
 
       # Adapter Activation method
-      # @param [Key] arg Reference to method
+      # @param [Symbol] arg Reference to method
       def activate_if(arg)
-        @activate_key = arg
+        @activation_block = arg
       end
 
       # Adapter Transform method
-      # @param [Key] arg Reference to method
+      # @param [Symbol] arg Reference to method
       def transform(arg)
-        @transformation_key = arg
+        @transformation_block = arg
       end
 
       # Adapter dispatcher method
-      # @param [Key] Refrence to method
+      # @param [Symbol] Refrence to method
       def dispatcher(arg)
-        @dispatcher_key = arg
+        @dispatcher_block = arg
       end
 
       # Performs message transformation
       # It converts message into specific format
-      # @param [Hash] msg Message
+      # @param [Object] msg Message object
       # @return Transformed message
       def perform_transformation(msg)
-        self.send(@transformation_key, msg)
+        self.send(@transformation_block, msg.message)
       end
 
       # Performs activation of adapter
-      # @return [Bool] adapter activated or not
+      # @return [Boolean] adapter activated or not
       def activate
-        self.send(@activate_key)
+        self.send(@activation_block)
       end
 
       # To perform http request to adapter
       # @param [Hash] t_msg Transformed Messsage
       def dispatch(t_msg)
-        self.send(@dispatcher_key, t_msg)
+        self.send(@dispatcher_block, t_msg)
       end
 
       # Call transform and sends transformed method to dispatcher
@@ -100,8 +98,12 @@ module Octo
   # Adapter class which sets all adapters
   class Adapter
     class << self
+
       # Valid Adapters List
-      @@valid_adapters = []
+      # @return [Array] valid adapters
+      def valid_adapters
+        @valid_adapters ||= []
+      end
 
       # Set all Adapters
       def set_adapters
@@ -109,17 +111,18 @@ module Octo
         @adapters.each do |adapter|
           adapter.send(:settings)
           if adapter.send(:activate)
-            @@valid_adapters << adapter
+            valid_adapters << adapter
           end
         end
       end
 
       # Set all Callbacks
       def set_callbacks
-        @@valid_adapters.each do |adapter|
+        valid_adapters.each do |adapter|
           adapter.send(:callbacks).each do |callback|
             Octo::Callbacks.send(callback, lambda { |opts|
-              adapter.send(:perform, opts)
+              msg = Octo::Message::Message.new opts
+              adapter.send(:perform, msg)
             })
           end
         end
@@ -132,6 +135,20 @@ module Octo
         }
       end
 
+      # Adding an adapter externaly
+      # @param [Object] adapter
+      def add_adapter(adapter)
+        if adapter.send(:activate)
+          valid_adapters << adapter
+          adapter.send(:callbacks).each do |callback|
+            Octo::Callbacks.send(callback, lambda { |opts|
+              msg = Octo::Message::Message.new opts
+              adapter.send(:perform, msg)
+            })
+          end
+        end
+      end
+
       # After connect method called after Octo connection
       def after_connect
         set_adapters
@@ -140,5 +157,3 @@ module Octo
     end
   end
 end
-
-require 'messageadapter/hello_adapter'

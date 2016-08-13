@@ -1,5 +1,10 @@
 require 'octocore/callbacks'
+
+# Generic Adapter
 require 'base_adapter'
+
+# Adapters
+require 'messageadapter/hello_adapter'
 
 module Octo
   # Message Adapters module
