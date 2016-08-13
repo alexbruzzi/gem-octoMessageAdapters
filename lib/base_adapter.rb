@@ -2,20 +2,28 @@ require 'octocore'
 require 'octocore/callbacks'
 
 module Octo
+
   # Adapter to perform all adapter operations
   module BaseAdapter
+
     # Default set of Octo Events Callback
-    DEFAULT_CALLBACKS = [:after_app_init, :after_app_login, :after_app_logout, 
+    DEFAULT_CALLBACKS = [:after_app_init, :after_app_login, :after_app_logout,
       :after_page_view, :after_productpage_view]
 
     module ClassMethods
+
+
       # Add Callbacks for adapter
       # @param [Array] *callback Array of allowed callbacks
       def callback_for(*callback)
         @callbacks += callbacks
       end
 
-      # Enterprise check to allow all enterprises
+      # Enterprise check to allow all enterprises. Adapters can be configured to
+      #   be applied only specific to enterprises. It can be useful in cases
+      #   when GA adapter is used. One would want each enterprise to send it
+      #   using their corresponding settings. On the other hand, a plugin
+      #   would want to be transform all messages irrespective of enterprises
       # @return [Boolean] check Allow all Enterprises
       def enterprise_only(check = true)
         @enterprise_only = check
@@ -34,8 +42,8 @@ module Octo
         @adapter_settings = []
         Octo::Enterprise.all.each do |enterprise|
           opt = {
-            enterprise_id: enterprise.id, 
-            adapter_id: adapter_id, 
+            enterprise_id: enterprise.id,
+            adapter_id: adapter_id,
             enable: true
           }
           @adapter_settings << Octo::AdapterDetails.get_cached(opt)
@@ -43,25 +51,25 @@ module Octo
       end
 
       # Adapter Activation method
-      # @param [Symbol] arg Reference to method
+      # @param [Symbol] arg  Name of method to be used to activate adapter
       def activate_if(arg)
         @activation_block = arg
       end
 
       # Adapter Transform method
-      # @param [Symbol] arg Reference to method
+      # @param [Symbol] arg Name of method to be used for transformation
       def transform(arg)
         @transformation_block = arg
       end
 
       # Adapter dispatcher method
-      # @param [Symbol] Refrence to method
+      # @param [Symbol] arg Name of method for dispatching
       def dispatcher(arg)
         @dispatcher_block = arg
       end
 
       # Performs message transformation
-      # It converts message into specific format
+      #   It converts message into specific format
       # @param [Object] msg Message object
       # @return Transformed message
       def perform_transformation(msg)
@@ -87,16 +95,18 @@ module Octo
         dispatch t_msg
       end
     end
-    
+
     # Default Included method of Module
     # @param [Module] receiver Module reference
     def self.included(receiver)
       receiver.extend ClassMethods
     end
+
   end
 
   # Adapter class which sets all adapters
   class Adapter
+
     class << self
 
       # Valid Adapters List
@@ -130,7 +140,7 @@ module Octo
 
       # Fetch adapters list
       def get_adapters
-        ObjectSpace.each_object(Module).select { |m| 
+        ObjectSpace.each_object(Module).select { |m|
           m.included_modules.include? Octo::BaseAdapter
         }
       end
@@ -157,3 +167,4 @@ module Octo
     end
   end
 end
+

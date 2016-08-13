@@ -1,4 +1,5 @@
 module Octo
+
   module HelloAdapter
     include Octo::BaseAdapter
 
