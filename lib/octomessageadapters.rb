@@ -4,7 +4,8 @@ require 'octocore/callbacks'
 require 'base_adapter'
 
 # Adapters
-require 'messageadapter/hello_adapter'
+# require 'messageadapter/hello_adapter'
+require 'messageadapter/cassandra_adapter'
 
 module Octo
   # Message Adapters module
