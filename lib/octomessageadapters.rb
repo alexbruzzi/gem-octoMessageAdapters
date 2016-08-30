@@ -6,6 +6,7 @@ require 'base_adapter'
 # Adapters
 # require 'messageadapter/hello_adapter'
 require 'messageadapter/cassandra_adapter'
+require 'messageadapter/redis_adapter'
 
 module Octo
   # Message Adapters module
