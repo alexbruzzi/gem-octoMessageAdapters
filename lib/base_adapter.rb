@@ -8,10 +8,10 @@ module Octo
 
     # Default set of Octo Events Callback
     DEFAULT_CALLBACKS = [:after_app_init, :after_app_login, :after_app_logout,
-      :after_page_view, :after_productpage_view]
+                   :after_page_view, :after_productpage_view, :after_update_profile, 
+                   :after_update_push_token, :after_funnel_update]
 
     module ClassMethods
-
 
       # Add Callbacks for adapter
       # @param [Array] *callback Array of allowed callbacks
@@ -73,7 +73,7 @@ module Octo
       # @param [Object] msg Message object
       # @return Transformed message
       def perform_transformation(msg)
-        self.send(@transformation_block, msg.message)
+        self.send(@transformation_block, msg)
       end
 
       # Performs activation of adapter
@@ -119,7 +119,7 @@ module Octo
       def set_adapters
         @adapters = get_adapters
         @adapters.each do |adapter|
-          adapter.send(:settings)
+          # adapter.send(:settings)
           if adapter.send(:activate)
             valid_adapters << adapter
           end
@@ -131,8 +131,7 @@ module Octo
         valid_adapters.each do |adapter|
           adapter.send(:callbacks).each do |callback|
             Octo::Callbacks.send(callback, lambda { |opts|
-              msg = Octo::Message::Message.new opts
-              adapter.send(:perform, msg)
+              adapter.send(:perform, opts)
             })
           end
         end
@@ -152,8 +151,7 @@ module Octo
           valid_adapters << adapter
           adapter.send(:callbacks).each do |callback|
             Octo::Callbacks.send(callback, lambda { |opts|
-              msg = Octo::Message::Message.new opts
-              adapter.send(:perform, msg)
+              adapter.send(:perform, opts)
             })
           end
         end
