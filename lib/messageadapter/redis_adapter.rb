@@ -5,7 +5,7 @@ module Octo
   module RedisAdapter
     include Octo::BaseAdapter
 
-    ADAPTER_ID = 0
+    ADAPTER_ID = 2
 
     activate_if :activate_method
 
