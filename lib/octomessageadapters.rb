@@ -1,13 +1,8 @@
 require 'octocore/callbacks'
 
 # Generic Adapter
-require 'base_adapter'
-
-# Adapters
-# require 'messageadapter/hello_adapter'
-# require 'messageadapter/cassandra_adapter'
-# require 'messageadapter/redis_adapter'
-require 'messageadapter/mongo_adapter'
+require 'messageadapters/base_adapter'
+require 'messageadapters/adapters'
 
 module Octo
   # Message Adapters module
@@ -18,4 +13,3 @@ module Octo
     })
   end
 end
-

@@ -1,5 +1,5 @@
 module Adapter
-  module MessageAdapter
+  module MessageAdapters
 
     # The version of Octo Message Adapter module
     VERSION = '0.0.1'
