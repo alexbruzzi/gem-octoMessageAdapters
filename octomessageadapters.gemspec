@@ -1,8 +1,8 @@
-require File.expand_path('../lib/messageadapter/version', __FILE__)
+require File.expand_path('../lib/messageadapters/version', __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = 'octomessageadapters'
-  s.version     = Adapter::MessageAdapter::VERSION
+  s.version     = Adapter::MessageAdapters::VERSION
 
   s.summary     = 'Octo Message Adapter(s) Module'
   s.description = <<DESC
