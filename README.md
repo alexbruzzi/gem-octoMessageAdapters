@@ -5,7 +5,7 @@ This gem contains different adapters for third party analytics
 # Install
 
 
-Because the gem is in provate access, this is how to install it
+Because the gem is in private access, this is how to install it
 
 - Clone the repo
 - Run `./clean_build.sh`
