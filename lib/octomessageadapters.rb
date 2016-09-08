@@ -1,8 +1,8 @@
 require 'octocore/callbacks'
 
 # Generic Adapter
-require 'messageadapters/base_adapter'
-require 'messageadapters/adapters'
+require 'octomessageadapters/base_adapter'
+require 'octomessageadapters/adapters'
 
 module Octo
   # Message Adapters module
