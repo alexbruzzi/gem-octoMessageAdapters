@@ -29,7 +29,7 @@ module Octo
         unless enterprise
           Octo.logger.info 'Unable to find enterprise. Something\'s wrong'
         end
-        
+
         user = checkUser(enterprise, msg)
         unless user
           Octo.logger.info 'Unable to find user. Something\'s wrong'
@@ -41,7 +41,7 @@ module Octo
                            created_at: Time.now,
                            json_dump: msg,
                            type: eventName).save!
-        
+
         case eventName
         when 'app.init'
           Octo::AppInit.new(enterprise: enterprise,
@@ -102,7 +102,7 @@ module Octo
     class << self
 
       # Make an entry of Event type
-      # @param [Octo::Enterprise] enterprise 
+      # @param [Octo::Enterprise] enterprise
       # @param [String] event_name Name of Event
       def register_api_event(enterprise, event_name)
         Octo::ApiEvent.findOrCreate({ enterprise_id: enterprise.id,
@@ -236,7 +236,7 @@ module Octo
       # @param [Octo::User] user The user to whom this token belongs to
       # @param [Hash] msg The message hash
       def updateUserDeviceDetails(user, msg)
-        args = {user_id: user.id, 
+        args = {user_id: user.id,
                 user_enterprise_id: user.enterprise.id}
         # Check Device Type
         if msg[:browser]

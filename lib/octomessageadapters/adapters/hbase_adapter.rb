@@ -40,16 +40,19 @@ module Octo
         Octo::AppInit.new(enterprise: enterprise,
                           created_at: Time.now,
                           userid: user.id).save!
+        updateTimeForUser(user, msg)
         updateUserDeviceDetails(user, msg)
       when 'app.login'
         Octo::AppLogin.new(enterprise: enterprise,
                            created_at: Time.now,
                            userid: user.id).save!
+        updateTimeForUser(user, msg)
         updateUserDeviceDetails(user, msg)
       when 'app.logout'
         event = Octo::AppLogout.new(enterprise: enterprise,
                                     created_at: Time.now,
                                     userid: user.id).save!
+        updateTimeForUser(user, msg)
         updateUserDeviceDetails(user, msg)
       when 'page.view'
         page, categories, tags = checkPage(enterprise, msg)
@@ -57,6 +60,7 @@ module Octo
                            created_at: Time.now,
                            userid: user.id,
                            routeurl: page.routeurl).save!
+        updateTimeForUser(user, msg)
         updateUserDeviceDetails(user, msg)
       when 'productpage.view'
         product, categories, tags = checkProduct(enterprise, msg)
@@ -65,8 +69,10 @@ module Octo
                                  created_at: Time.now,
                                  userid: user.id,
                                  product_id: product.id).save!
+        updateTimeForUser(user, msg)
         updateUserDeviceDetails(user, msg)
       when 'update.profile'
+        updateTimeForUser(user, msg)
         checkUserProfileDetails(enterprise, user, msg)
         updateUserDeviceDetails(user, msg)
       when 'update.push_token'
@@ -232,11 +238,25 @@ module Octo
             created_at: Time.now).save!
       end
 
+
+      # Updates the time entry for the user. This is later
+      #   used for recommendations
+      # @param [Octo::User] user The user to whom this event is registered
+      # @param [Hash] msg The message hash
+      # @return [Octo::UserTime]
+      def updateTimeForUser(user, msg)
+        Octo::UserTime.new({
+          enterpriseid: user.enterprise.id,
+          userid: user.id,
+          created_at: Time.now.floor(Octo::UserTime::TIME_WINDOW)
+        }).save!
+      end
+
       # Updates user's device details
       # @param [Octo::User] user The user to whom this token belongs to
       # @param [Hash] msg The message hash
       def updateUserDeviceDetails(user, msg)
-        args = {user_id: user.id, 
+        args = {user_id: user.id,
                 user_enterprise_id: user.enterprise.id}
         # Check Device Type
         if msg[:browser]
