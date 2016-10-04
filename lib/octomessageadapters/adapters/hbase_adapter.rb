@@ -2,10 +2,10 @@ require 'octocore'
 
 module Octo
 
-  module MongoAdapter
+  module HBaseAdapter
     include Octo::BaseAdapter
 
-    ADAPTER_ID = 3
+    ADAPTER_ID = 6
 
     activate_if :activate_method
 
@@ -23,68 +23,63 @@ module Octo
     # @param [Hash] msg Message Hash
     # @return transformed message in required format
     def self.transform_method(msg)
-      begin
-        eventName = msg.delete(:event_name)
-        enterprise = Octo::Enterprise.find(msg[:enterpriseId])
-        unless enterprise
-          Octo.logger.info 'Unable to find enterprise. Something\'s wrong'
-        end
+      eventName = msg.delete(:event_name)
+      enterprise = checkEnterprise(msg)
+      unless enterprise
+        Octo.logger.info 'Unable to find enterprise. Something\'s wrong'
+      end
+      user = checkUser(enterprise, msg)
 
-        user = checkUser(enterprise, msg)
-        unless user
-          Octo.logger.info 'Unable to find user. Something\'s wrong'
-        end
-
-        user = Octo::User.find(msg[:userId])
-        register_api_event(enterprise, eventName)
-        Octo::ApiTrack.new(customid: msg[:id],
+      register_api_event(enterprise, eventName)
+      Octo::ApiTrack.new(customid: msg[:id],
+                         created_at: Time.now,
+                         json_dump: msg,
+                         type: eventName).save!
+      case eventName
+      when 'app.init'
+        Octo::AppInit.new(enterprise: enterprise,
+                          created_at: Time.now,
+                          userid: user.id).save!
+        updateTimeForUser(user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'app.login'
+        Octo::AppLogin.new(enterprise: enterprise,
                            created_at: Time.now,
-                           json_dump: msg,
-                           type: eventName).save!
-
-        case eventName
-        when 'app.init'
-          Octo::AppInit.new(enterprise: enterprise,
-                            created_at: Time.now,
-                            userid: user._id).save!
-          updateUserDeviceDetails(user, msg)
-        when 'app.login'
-          Octo::AppLogin.new(enterprise: enterprise,
-                             created_at: Time.now,
-                             userid: user._id).save!
-          updateUserDeviceDetails(user, msg)
-        when 'app.logout'
-          event = Octo::AppLogout.new(enterprise: enterprise,
-                                      created_at: Time.now,
-                                      userid: user._id).save!
-          updateUserDeviceDetails(user, msg)
-        when 'page.view'
-          page, categories, tags = checkPage(enterprise, msg)
-          Octo::PageView.new(enterprise: enterprise,
-                             created_at: Time.now,
-                             userid: user._id,
-                             routeurl: page.routeurl).save!
-          updateUserDeviceDetails(user, msg)
-        when 'productpage.view'
-          product, categories, tags = checkProduct(enterprise, msg)
-          Octo::ProductPageView.new(
-                                   enterprise: enterprise,
-                                   created_at: Time.now,
-                                   userid: user._id,
-                                   product_id: product.id).save!
-          updateUserDeviceDetails(user, msg)
-        when 'update.profile'
-          checkUserProfileDetails(enterprise, user, msg)
-          updateUserDeviceDetails(user, msg)
-        when 'update.push_token'
-          checkPushToken(enterprise, user, msg)
-          checkPushKey(enterprise, msg)
-        when 'funnel_update'
-          checkRedisSession(enterprise,msg)
-        end
-      rescue Exception => e
-        puts e.message
-        Octo.logger.info e.message
+                           userid: user.id).save!
+        updateTimeForUser(user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'app.logout'
+        event = Octo::AppLogout.new(enterprise: enterprise,
+                                    created_at: Time.now,
+                                    userid: user.id).save!
+        updateTimeForUser(user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'page.view'
+        page, categories, tags = checkPage(enterprise, msg)
+        Octo::PageView.new(enterprise: enterprise,
+                           created_at: Time.now,
+                           userid: user.id,
+                           routeurl: page.routeurl).save!
+        updateTimeForUser(user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'productpage.view'
+        product, categories, tags = checkProduct(enterprise, msg)
+        Octo::ProductPageView.new(
+                                 enterprise: enterprise,
+                                 created_at: Time.now,
+                                 userid: user.id,
+                                 product_id: product.id).save!
+        updateTimeForUser(user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'update.profile'
+        updateTimeForUser(user, msg)
+        checkUserProfileDetails(enterprise, user, msg)
+        updateUserDeviceDetails(user, msg)
+      when 'update.push_token'
+        checkPushToken(enterprise, user, msg)
+        checkPushKey(enterprise, msg)
+      when 'funnel_update'
+        checkRedisSession(enterprise,msg)
       end
       msg
     end
@@ -115,8 +110,8 @@ module Octo
       # @param [Hash] msg The message hash, MUST contain, :rediskey
       # @return [void]
       def checkRedisSession(enterprise,msg)
-        sessionList = Cequel::Record.redis.lrange(msg[:rediskey],0,-1)
-        Cequel::Record.redis.del(msg[:rediskey])
+        sessionList = MassiveRecord::ORM::Table.redis.lrange(msg[:rediskey],0,-1)
+        MassiveRecord::ORM::Table.redis.del(msg[:rediskey])
         sessionList.each_index{ |index|
           if index!=(sessionList.length-1)
             updateFunnelTracker(enterprise,sessionList[index],sessionList[index+1])
@@ -207,14 +202,25 @@ module Octo
         Octo::PushKey.findOrCreateOrUpdate(args, opts)
       end
 
+      # Check if the enterprise exists. Create a new enterprise if it does
+      #   not exist. This method makes sense because the enterprise authentication
+      #   is handled by kong. Hence we can be sure that all these enterprises
+      #   are valid.
+      # @param [Hash] msg The message hash
+      # @return [Octo::Enterprise] The enterprise object
+      def checkEnterprise(msg)
+        Octo::Enterprise.findOrCreate({id: msg[:enterpriseId]},
+                                      {name: msg[:enterpriseName]})
+      end
+
       # Checks for user and creates if not exists
       # @param [Octo::Enterprise] enterprise The Enterprise object
       # @param [Hash] msg The message hash
       # @return [Octo::User] The push user object corresponding to this user
       def checkUser(enterprise, msg)
         args = {
-          enterprise_id: enterprise._id,
-          _id: msg[:userId]
+          enterprise_id: enterprise.id,
+          id: msg[:userId]
         }
         Octo::User.findOrCreate(args)
       end
@@ -230,6 +236,20 @@ module Octo
             latitude: msg[:phone].fetch('latitude', 0.0),
             longitude: msg[:phone].fetch('longitude', 0.0),
             created_at: Time.now).save!
+      end
+
+
+      # Updates the time entry for the user. This is later
+      #   used for recommendations
+      # @param [Octo::User] user The user to whom this event is registered
+      # @param [Hash] msg The message hash
+      # @return [Octo::UserTime]
+      def updateTimeForUser(user, msg)
+        Octo::UserTime.new({
+          enterpriseid: user.enterprise.id,
+          userid: user.id,
+          created_at: Time.now.floor(Octo::UserTime::TIME_WINDOW)
+        }).save!
       end
 
       # Updates user's device details
@@ -285,19 +305,13 @@ module Octo
 
         args = {
           enterprise_id: enterprise.id,
-          id: msg[:routeUrl]
+          routeurl: msg[:routeUrl]
         }
         opts = {
           categories: Set.new(msg[:categories]),
-          tags: Set.new(msg[:tags]),
-          routeurl: msg[:routeUrl]
+          tags: Set.new(msg[:tags])
         }
         page = Octo::Page.findOrCreateOrUpdate(args, opts)
-        if page
-          page = Octo::Page.find(msg[:routeUrl])
-        else
-          page = args
-        end
         [page, cats, tags]
       end
 
@@ -322,11 +336,6 @@ module Octo
           routeurl: msg[:routeUrl]
         }
         prod = Octo::Product.findOrCreateOrUpdate(args, opts)
-        if prod
-          prod = Octo::Product.find(msg[:productId])
-        else
-          prod = opts
-        end
         [prod, categories, tags]
       end
 
@@ -359,3 +368,4 @@ module Octo
 
   end
 end
+

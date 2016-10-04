@@ -1,4 +1,4 @@
-require File.expand_path('../lib/messageadapters/version', __FILE__)
+require File.expand_path('../lib/octomessageadapters/version', __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = 'octomessageadapters'
