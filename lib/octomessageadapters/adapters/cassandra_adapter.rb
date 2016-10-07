@@ -76,6 +76,15 @@ module Octo
       when 'funnel_update'
         checkRedisSession(enterprise,msg)
       end
+
+      if eventName.startswith?('custom_')
+        Octo::CustomEvents.new(
+          enterprise: enterprise,
+          created_at: Time.now,
+          userid: user.id,
+          msg_json: msg
+        ).save!
+      end
       msg
     end
 

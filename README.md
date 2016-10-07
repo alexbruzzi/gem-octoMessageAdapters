@@ -4,6 +4,7 @@ This gem contains different adapters for third party analytics
 
 # Install
 
+`gem install octomessageadapters`
 
 Because the gem is in private access, this is how to install it
 
@@ -16,4 +17,3 @@ If you are using Bundler, which is what we follow at Octo-matic, you can make th
 ```ruby
 gem 'octomessageadapters', :git => 'git@github.com:octoai/gem-octoMessageAdapters.git'
 ```
-
