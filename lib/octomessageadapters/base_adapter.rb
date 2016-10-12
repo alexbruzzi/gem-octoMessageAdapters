@@ -9,7 +9,7 @@ module Octo
     # Default set of Octo Events Callback
     DEFAULT_CALLBACKS = [:after_app_init, :after_app_login, :after_app_logout,
                    :after_page_view, :after_productpage_view, :after_update_profile, 
-                   :after_update_push_token, :after_funnel_update]
+                   :after_update_push_token, :after_funnel_update, :after_custom]
 
     module ClassMethods
 
@@ -157,8 +157,22 @@ module Octo
         end
       end
 
+      def redis_queue
+        @queue
+      end
+
+      def redis_connect
+        # Establish connection to redis server
+        default_config = {
+          host: '127.0.0.1', port: 6379
+        }
+        @redis = Redis.new(Octo.get_config(:redis, default_config))
+        @queue = Redis::Queue.new('octo', 'message', :redis => redis)
+      end
+
       # After connect method called after Octo connection
       def after_connect
+        redis_connect
         set_adapters
         set_callbacks
       end
